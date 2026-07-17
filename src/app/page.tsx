@@ -78,15 +78,15 @@ export default function SuperAdminDashboard() {
 
   const backendUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") + "/api";
 
-  const getHeaders = () => {
+  const getHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
     if (typeof window !== "undefined") {
       const passcode = sessionStorage.getItem("super_admin_passcode") || "Admin@FaithCore";
-      return {
-        "Content-Type": "application/json",
-        "X-Super-Admin-Token": passcode
-      };
+      headers["X-Super-Admin-Token"] = passcode;
     }
-    return { "Content-Type": "application/json" };
+    return headers;
   };
 
   const fetchData = async () => {
