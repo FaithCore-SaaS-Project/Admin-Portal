@@ -78,26 +78,39 @@ export default function SuperAdminDashboard() {
 
   const backendUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") + "/api";
 
+  const getHeaders = () => {
+    if (typeof window !== "undefined") {
+      const passcode = sessionStorage.getItem("super_admin_passcode") || "Admin@FaithCore";
+      return {
+        "Content-Type": "application/json",
+        "X-Super-Admin-Token": passcode
+      };
+    }
+    return { "Content-Type": "application/json" };
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
+      const headers = getHeaders();
+
       // Fetch analytics
-      const resAnalytics = await fetch(`${backendUrl}/super-admin/analytics`);
+      const resAnalytics = await fetch(`${backendUrl}/super-admin/analytics`, { headers });
       const dataAnalytics = await resAnalytics.json();
       setAnalytics(dataAnalytics);
 
       // Fetch churches
-      const resChurches = await fetch(`${backendUrl}/super-admin/churches`);
+      const resChurches = await fetch(`${backendUrl}/super-admin/churches`, { headers });
       const dataChurches = await resChurches.json();
       setChurches(dataChurches);
 
       // Fetch subscriptions
-      const resSubs = await fetch(`${backendUrl}/super-admin/subscriptions`);
+      const resSubs = await fetch(`${backendUrl}/super-admin/subscriptions`, { headers });
       const dataSubs = await resSubs.json();
       setSubscriptions(dataSubs);
 
       // Fetch payments
-      const resPayments = await fetch(`${backendUrl}/super-admin/payments`);
+      const resPayments = await fetch(`${backendUrl}/super-admin/payments`, { headers });
       const dataPayments = await resPayments.json();
       setPayments(dataPayments);
 
@@ -139,8 +152,10 @@ export default function SuperAdminDashboard() {
     e.preventDefault();
     if (passcodeInput === "Admin@FaithCore") {
       sessionStorage.setItem("super_admin_auth", "true");
+      sessionStorage.setItem("super_admin_passcode", passcodeInput);
       setIsAuthenticated(true);
       setAuthError("");
+      fetchData(); // Trigger reload with correct auth header
     } else {
       setAuthError("Invalid passcode. Access Denied.");
     }
@@ -148,6 +163,7 @@ export default function SuperAdminDashboard() {
 
   const handleLogout = () => {
     sessionStorage.removeItem("super_admin_auth");
+    sessionStorage.removeItem("super_admin_passcode");
     setIsAuthenticated(false);
     setPasscodeInput("");
   };
@@ -157,7 +173,7 @@ export default function SuperAdminDashboard() {
       setActionLoading(id);
       const res = await fetch(`${backendUrl}/super-admin/churches/${id}/toggle-status`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: getHeaders()
       });
       if (res.ok) {
         await fetchData();
