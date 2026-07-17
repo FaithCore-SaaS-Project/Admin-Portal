@@ -76,7 +76,7 @@ export default function SuperAdminDashboard() {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const backendUrl = "http://localhost:8000/api";
+  const backendUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") + "/api";
 
   const fetchData = async () => {
     try {
