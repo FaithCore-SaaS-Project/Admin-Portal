@@ -39,6 +39,12 @@ interface Church {
   status: "active" | "inactive";
   users_count: number;
   members_count: number;
+  subscriptions?: {
+    id: number;
+    plan?: { name: string };
+    status: string;
+    end_date: string;
+  }[];
 }
 
 interface Subscription {
@@ -53,6 +59,7 @@ interface Subscription {
 interface Payment {
   id: number;
   church: { church_name: string };
+  plan?: { name: string };
   amount: number;
   currency: string;
   gateway: string;
@@ -73,6 +80,7 @@ export default function SuperAdminDashboard() {
   const [payments, setPayments] = useState<Payment[]>([]);
   
   const [loading, setLoading] = useState(true);
+  const [isMockData, setIsMockData] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -114,15 +122,17 @@ export default function SuperAdminDashboard() {
       const dataPayments = await resPayments.json();
       setPayments(dataPayments);
 
+      setIsMockData(false);
     } catch (e) {
       console.error("Error loading Super Admin data, using fallback mock data:", e);
+      setIsMockData(true);
       // Fallback mocks if backend is not running locally
       setAnalytics({ total_churches: 4, active_subscriptions: 3, total_revenue: 29700.00, mrr: 9900.00 });
       setChurches([
-        { id: 1, church_name: "Grace Community Church", registration_no: "FC-998271", pastor_name: "Pastor John", email: "info@grace.com", phone: "+94771234567", city: "Colombo", country: "Sri Lanka", status: "active", users_count: 3, members_count: 142 },
-        { id: 2, church_name: "Calvary Sanctuary", registration_no: "FC-881290", pastor_name: "Pastor David", email: "contact@calvary.org", phone: "+94711112222", city: "Kandy", country: "Sri Lanka", status: "active", users_count: 2, members_count: 89 },
-        { id: 3, church_name: "Zion Methodist Church", registration_no: "FC-772183", pastor_name: "Rev. Thomas", email: "thomas@zion.org", phone: "+94710002233", city: "Galle", country: "Sri Lanka", status: "active", users_count: 4, members_count: 210 },
-        { id: 4, church_name: "New Life Assembly", registration_no: "FC-556122", pastor_name: "Pastor Saman", email: "saman@newlife.lk", phone: "+94770001111", city: "Jaffna", country: "Sri Lanka", status: "inactive", users_count: 1, members_count: 45 }
+        { id: 1, church_name: "Grace Community Church", registration_no: "FC-998271", pastor_name: "Pastor John", email: "info@grace.com", phone: "+94771234567", city: "Colombo", country: "Sri Lanka", status: "active", users_count: 3, members_count: 142, subscriptions: [{ id: 1, plan: { name: "Premium Plan" }, status: "active", end_date: "2027-01-10" }] },
+        { id: 2, church_name: "Calvary Sanctuary", registration_no: "FC-881290", pastor_name: "Pastor David", email: "contact@calvary.org", phone: "+94711112222", city: "Kandy", country: "Sri Lanka", status: "active", users_count: 2, members_count: 89, subscriptions: [{ id: 2, plan: { name: "Basic Plan" }, status: "active", end_date: "2026-08-15" }] },
+        { id: 3, church_name: "Zion Methodist Church", registration_no: "FC-772183", pastor_name: "Rev. Thomas", email: "thomas@zion.org", phone: "+94710002233", city: "Galle", country: "Sri Lanka", status: "active", users_count: 4, members_count: 210, subscriptions: [{ id: 3, plan: { name: "Premium Plan" }, status: "expired", end_date: "2026-07-01" }] },
+        { id: 4, church_name: "New Life Assembly", registration_no: "FC-556122", pastor_name: "Pastor Saman", email: "saman@newlife.lk", phone: "+94770001111", city: "Jaffna", country: "Sri Lanka", status: "inactive", users_count: 1, members_count: 45, subscriptions: [] }
       ]);
       setSubscriptions([
         { id: 1, church: { church_name: "Grace Community Church" }, plan: { name: "Premium Plan", price: 9900.00 }, start_date: "2026-01-10", end_date: "2027-01-10", status: "active" },
@@ -148,16 +158,40 @@ export default function SuperAdminDashboard() {
     fetchData();
   }, []);
 
-  const handleVerifyPasscode = (e: React.FormEvent) => {
+  const handleVerifyPasscode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (passcodeInput === "Admin@FaithCore") {
-      sessionStorage.setItem("super_admin_auth", "true");
-      sessionStorage.setItem("super_admin_passcode", passcodeInput);
-      setIsAuthenticated(true);
-      setAuthError("");
-      fetchData(); // Trigger reload with correct auth header
-    } else {
-      setAuthError("Invalid passcode. Access Denied.");
+    setLoading(true);
+    setAuthError("");
+    try {
+      const testHeaders = {
+        "Content-Type": "application/json",
+        "X-Super-Admin-Token": passcodeInput,
+      };
+      const res = await fetch(`${backendUrl}/super-admin/analytics`, { headers: testHeaders });
+      
+      if (res.ok) {
+        sessionStorage.setItem("super_admin_auth", "true");
+        sessionStorage.setItem("super_admin_passcode", passcodeInput);
+        setIsAuthenticated(true);
+        setAuthError("");
+        fetchData(); // Trigger reload with correct auth header
+      } else {
+        setAuthError("Invalid passcode. Access Denied.");
+      }
+    } catch (err) {
+      console.error("Authentication check failed:", err);
+      // Fallback local check only if backend is not running to allow offline testing
+      if (passcodeInput === "Admin@FaithCore") {
+        sessionStorage.setItem("super_admin_auth", "true");
+        sessionStorage.setItem("super_admin_passcode", passcodeInput);
+        setIsAuthenticated(true);
+        setAuthError("");
+        fetchData();
+      } else {
+        setAuthError("Invalid passcode or backend server is offline.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -260,6 +294,13 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#070913] text-white selection:bg-[#5B3DF5] selection:text-white font-sans">
+      
+      {isMockData && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 py-3 text-center text-xs font-semibold text-amber-400 flex items-center justify-center gap-2 relative z-25 backdrop-blur-md">
+          <Clock size={14} className="animate-pulse shrink-0" />
+          <span>Offline Mode: Displaying Simulated Platform Mock Data. Please run the backend service (port 8000) to sync.</span>
+        </div>
+      )}
       
       {/* Background decoration glows */}
       <div className="absolute top-0 left-0 w-full h-[600px] opacity-30 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-900/35 via-[#070B18] to-transparent pointer-events-none"></div>
@@ -375,6 +416,7 @@ export default function SuperAdminDashboard() {
                       <tr className="border-b border-white/10 text-gray-400">
                         <th className="py-3 font-semibold">Church</th>
                         <th className="py-3 font-semibold">Amount</th>
+                        <th className="py-3 font-semibold">Package</th>
                         <th className="py-3 font-semibold">Gateway</th>
                         <th className="py-3 font-semibold">Transaction ID</th>
                         <th className="py-3 font-semibold">Payment Date</th>
@@ -385,6 +427,7 @@ export default function SuperAdminDashboard() {
                         <tr key={pay.id} className="text-gray-300">
                           <td className="py-3 font-semibold text-white">{pay.church?.church_name}</td>
                           <td className="py-3">{pay.currency} {pay.amount.toLocaleString()}</td>
+                          <td className="py-3 text-xs font-semibold text-violet-400 uppercase">{pay.plan?.name || "Standard Plan"}</td>
                           <td className="py-3"><span className="px-2 py-0.5 text-[10px] rounded-md bg-white/5 font-semibold text-gray-300 border border-white/10 uppercase">{pay.gateway}</span></td>
                           <td className="py-3 text-xs text-gray-500 font-mono">{pay.transaction_id}</td>
                           <td className="py-3 text-xs">{pay.payment_date}</td>
@@ -425,6 +468,7 @@ export default function SuperAdminDashboard() {
                       <th className="py-3 font-semibold">Activation Code</th>
                       <th className="py-3 font-semibold">Pastor</th>
                       <th className="py-3 font-semibold">Location</th>
+                      <th className="py-3 font-semibold text-center">Active Package</th>
                       <th className="py-3 font-semibold text-center">Users</th>
                       <th className="py-3 font-semibold text-center">Members</th>
                       <th className="py-3 font-semibold">Status</th>
@@ -441,6 +485,29 @@ export default function SuperAdminDashboard() {
                         <td className="py-3 text-xs text-violet-400 font-bold">{c.registration_no || `FC-000${c.id}`}</td>
                         <td className="py-3 text-xs">{c.pastor_name}</td>
                         <td className="py-3 text-xs">{c.city}, {c.country}</td>
+                        <td className="py-3 text-center text-xs">
+                          {(() => {
+                            const activeSub = c.subscriptions?.find(
+                              (s) => (s.status === "active" || s.status === "trialing") && new Date(s.end_date) >= new Date()
+                            );
+                            if (activeSub) {
+                              return (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-violet-500/10 text-violet-400 border border-violet-500/20 uppercase">
+                                  {activeSub.plan?.name}
+                                </span>
+                              );
+                            }
+                            const latestSub = c.subscriptions && c.subscriptions.length > 0 ? c.subscriptions[0] : null;
+                            if (latestSub) {
+                              return (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 uppercase">
+                                  Expired ({latestSub.plan?.name})
+                                </span>
+                              );
+                            }
+                            return <span className="text-gray-500 italic">No Plan</span>;
+                          })()}
+                        </td>
                         <td className="py-3 text-center text-xs font-semibold">{c.users_count || 1}</td>
                         <td className="py-3 text-center text-xs font-semibold">{c.members_count || 0}</td>
                         <td className="py-3">
@@ -537,6 +604,7 @@ export default function SuperAdminDashboard() {
                     <tr className="border-b border-white/10 text-gray-400">
                       <th className="py-3 font-semibold">Church</th>
                       <th className="py-3 font-semibold">Paid Amount</th>
+                      <th className="py-3 font-semibold">Package</th>
                       <th className="py-3 font-semibold">Gateway</th>
                       <th className="py-3 font-semibold">Transaction ID</th>
                       <th className="py-3 font-semibold">Payment Date</th>
@@ -548,6 +616,7 @@ export default function SuperAdminDashboard() {
                       <tr key={pay.id} className="text-gray-300">
                         <td className="py-3 font-bold text-white">{pay.church?.church_name}</td>
                         <td className="py-3 font-semibold text-emerald-400">{pay.currency} {pay.amount.toLocaleString()}</td>
+                        <td className="py-3 text-xs font-semibold text-violet-400 uppercase">{pay.plan?.name || "Standard Plan"}</td>
                         <td className="py-3 text-xs"><span className="px-2 py-0.5 text-[10px] rounded-md bg-white/5 font-bold border border-white/10 uppercase">{pay.gateway}</span></td>
                         <td className="py-3 text-xs text-gray-500 font-mono">{pay.transaction_id}</td>
                         <td className="py-3 text-xs">{pay.payment_date}</td>
