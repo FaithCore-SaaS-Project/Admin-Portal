@@ -598,75 +598,7 @@ export default function SuperAdminDashboard() {
                 </table>
               </div>
 
-              {/* SMS SETTINGS MODAL */}
-              {selectedSmsChurch && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
-                  <div className="w-full max-w-md bg-[#0e1528] border border-white/10 rounded-2xl p-6 shadow-2xl text-white">
-                    <div className="flex justify-between items-center mb-4 pb-3 border-b border-white/10">
-                      <div>
-                        <h3 className="font-bold text-lg text-white">SMS Gateway Settings</h3>
-                        <p className="text-xs text-gray-400 mt-0.5">{selectedSmsChurch.church_name}</p>
-                      </div>
-                      <button 
-                        onClick={() => setSelectedSmsChurch(null)}
-                        className="text-gray-400 hover:text-white text-lg font-bold"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    <form onSubmit={handleSaveSmsSettings} className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
-                          Approved Custom Sender ID (Masking Name)
-                        </label>
-                        <input 
-                          type="text"
-                          maxLength={11}
-                          placeholder="e.g. ST_MARYS (Max 11 Chars)"
-                          value={inputSenderId}
-                          onChange={(e) => setInputSenderId(e.target.value.toUpperCase())}
-                          className="w-full bg-[#090e1a] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-mono placeholder:text-gray-600 outline-none focus:border-violet-500"
-                        />
-                        <p className="text-[10px] text-gray-500 mt-1">
-                          Leave empty to use system default (FAITHCORE). Must be approved on SMSLenz.
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
-                          Add Top-up Credits (Optional)
-                        </label>
-                        <input 
-                          type="number"
-                          min={0}
-                          placeholder="e.g. 500"
-                          value={inputTopupAmount}
-                          onChange={(e) => setInputTopupAmount(e.target.value ? Number(e.target.value) : "")}
-                          className="w-full bg-[#090e1a] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-mono placeholder:text-gray-600 outline-none focus:border-violet-500"
-                        />
-                      </div>
-
-                      <div className="flex gap-3 pt-2">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedSmsChurch(null)}
-                          className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 font-bold py-2.5 rounded-xl text-xs transition-all"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={smsUpdating}
-                          className="flex-1 bg-violet-600 hover:bg-violet-500 text-white font-bold py-2.5 rounded-xl text-xs shadow-lg shadow-violet-500/20 transition-all disabled:opacity-50"
-                        >
-                          {smsUpdating ? "Saving..." : "Save Settings"}
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              )}
+              
 
             </div>
           )}
@@ -766,7 +698,75 @@ export default function SuperAdminDashboard() {
 
         </section>
 
-      </main>
+      \n        {/* SMS SETTINGS MODAL */}
+              {selectedSmsChurch && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
+                  <div className="w-full max-w-md bg-[#0e1528] border border-white/10 rounded-2xl p-6 shadow-2xl text-white">
+                    <div className="flex justify-between items-center mb-4 pb-3 border-b border-white/10">
+                      <div>
+                        <h3 className="font-bold text-lg text-white">SMS Gateway Settings</h3>
+                        <p className="text-xs text-gray-400 mt-0.5">{selectedSmsChurch.church_name}</p>
+                      </div>
+                      <button 
+                        onClick={() => setSelectedSmsChurch(null)}
+                        className="text-gray-400 hover:text-white text-lg font-bold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveSmsSettings} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
+                          Approved Custom Sender ID (Masking Name)
+                        </label>
+                        <input 
+                          type="text"
+                          maxLength={11}
+                          placeholder="e.g. ST_MARYS (Max 11 Chars)"
+                          value={inputSenderId}
+                          onChange={(e) => setInputSenderId(e.target.value.toUpperCase())}
+                          className="w-full bg-[#090e1a] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-mono placeholder:text-gray-600 outline-none focus:border-violet-500"
+                        />
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          Leave empty to use system default (FAITHCORE). Must be approved on SMSLenz.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
+                          Add Top-up Credits (Optional)
+                        </label>
+                        <input 
+                          type="number"
+                          min={0}
+                          placeholder="e.g. 500"
+                          value={inputTopupAmount}
+                          onChange={(e) => setInputTopupAmount(e.target.value ? Number(e.target.value) : "")}
+                          className="w-full bg-[#090e1a] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-mono placeholder:text-gray-600 outline-none focus:border-violet-500"
+                        />
+                      </div>
+
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSmsChurch(null)}
+                          className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 font-bold py-2.5 rounded-xl text-xs transition-all"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={smsUpdating}
+                          className="flex-1 bg-violet-600 hover:bg-violet-500 text-white font-bold py-2.5 rounded-xl text-xs shadow-lg shadow-violet-500/20 transition-all disabled:opacity-50"
+                        >
+                          {smsUpdating ? "Saving..." : "Save Settings"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}\n\n      </main>
 
     </div>
   );
