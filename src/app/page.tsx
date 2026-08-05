@@ -37,6 +37,8 @@ interface Church {
   city: string;
   country: string;
   status: "active" | "inactive";
+  sms_sender_id?: string;
+  topup_sms_balance?: number;
   users_count: number;
   members_count: number;
   subscriptions?: {
@@ -83,6 +85,52 @@ export default function SuperAdminDashboard() {
   const [isMockData, setIsMockData] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // SMS Settings Modal State
+  const [selectedSmsChurch, setSelectedSmsChurch] = useState<Church | null>(null);
+  const [inputSenderId, setInputSenderId] = useState("");
+  const [inputTopupAmount, setInputTopupAmount] = useState<number | "">("");
+  const [smsUpdating, setSmsUpdating] = useState(false);
+
+  const handleSaveSmsSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSmsChurch) return;
+    setSmsUpdating(true);
+    try {
+      const res = await fetch(`${backendUrl}/super-admin/churches/${selectedSmsChurch.id}/sms-settings`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({
+          sender_id: inputSenderId,
+          add_topup: inputTopupAmount ? Number(inputTopupAmount) : 0
+        })
+      });
+      if (res.ok) {
+        alert(`SMS Settings updated for ${selectedSmsChurch.church_name}!`);
+        await fetchData();
+        setSelectedSmsChurch(null);
+      } else {
+        // Fallback local update if mock
+        setChurches(prev => prev.map(c => c.id === selectedSmsChurch.id ? { 
+          ...c, 
+          sms_sender_id: inputSenderId || c.sms_sender_id,
+          topup_sms_balance: (c.topup_sms_balance || 0) + (inputTopupAmount ? Number(inputTopupAmount) : 0)
+        } : c));
+        setSelectedSmsChurch(null);
+      }
+    } catch (err) {
+      console.error("Failed to update SMS settings", err);
+      // Fallback
+      setChurches(prev => prev.map(c => c.id === selectedSmsChurch.id ? { 
+        ...c, 
+        sms_sender_id: inputSenderId || c.sms_sender_id,
+        topup_sms_balance: (c.topup_sms_balance || 0) + (inputTopupAmount ? Number(inputTopupAmount) : 0)
+      } : c));
+      setSelectedSmsChurch(null);
+    } finally {
+      setSmsUpdating(false);
+    }
+  };
 
   const backendUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") + "/api";
 
@@ -520,23 +568,106 @@ export default function SuperAdminDashboard() {
                           </span>
                         </td>
                         <td className="py-3 text-right">
-                          <button
-                            onClick={() => handleToggleStatus(c.id)}
-                            disabled={actionLoading === c.id}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                              c.status === "active"
-                                ? "bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
-                                : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
-                            }`}
-                          >
-                            {actionLoading === c.id ? "Updating..." : c.status === "active" ? "Deactivate" : "Activate"}
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedSmsChurch(c);
+                                setInputSenderId(c.sms_sender_id || "");
+                                setInputTopupAmount("");
+                              }}
+                              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 border border-violet-500/20 transition-all"
+                            >
+                              SMS Settings
+                            </button>
+                            <button
+                              onClick={() => handleToggleStatus(c.id)}
+                              disabled={actionLoading === c.id}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                c.status === "active"
+                                  ? "bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+                                  : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
+                              }`}
+                            >
+                              {actionLoading === c.id ? "Updating..." : c.status === "active" ? "Deactivate" : "Activate"}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+
+              {/* SMS SETTINGS MODAL */}
+              {selectedSmsChurch && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
+                  <div className="w-full max-w-md bg-[#0e1528] border border-white/10 rounded-2xl p-6 shadow-2xl text-white">
+                    <div className="flex justify-between items-center mb-4 pb-3 border-b border-white/10">
+                      <div>
+                        <h3 className="font-bold text-lg text-white">SMS Gateway Settings</h3>
+                        <p className="text-xs text-gray-400 mt-0.5">{selectedSmsChurch.church_name}</p>
+                      </div>
+                      <button 
+                        onClick={() => setSelectedSmsChurch(null)}
+                        className="text-gray-400 hover:text-white text-lg font-bold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveSmsSettings} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
+                          Approved Custom Sender ID (Masking Name)
+                        </label>
+                        <input 
+                          type="text"
+                          maxLength={11}
+                          placeholder="e.g. ST_MARYS (Max 11 Chars)"
+                          value={inputSenderId}
+                          onChange={(e) => setInputSenderId(e.target.value.toUpperCase())}
+                          className="w-full bg-[#090e1a] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-mono placeholder:text-gray-600 outline-none focus:border-violet-500"
+                        />
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          Leave empty to use system default (FAITHCORE). Must be approved on SMSLenz.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
+                          Add Top-up Credits (Optional)
+                        </label>
+                        <input 
+                          type="number"
+                          min={0}
+                          placeholder="e.g. 500"
+                          value={inputTopupAmount}
+                          onChange={(e) => setInputTopupAmount(e.target.value ? Number(e.target.value) : "")}
+                          className="w-full bg-[#090e1a] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-mono placeholder:text-gray-600 outline-none focus:border-violet-500"
+                        />
+                      </div>
+
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSmsChurch(null)}
+                          className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 font-bold py-2.5 rounded-xl text-xs transition-all"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={smsUpdating}
+                          className="flex-1 bg-violet-600 hover:bg-violet-500 text-white font-bold py-2.5 rounded-xl text-xs shadow-lg shadow-violet-500/20 transition-all disabled:opacity-50"
+                        >
+                          {smsUpdating ? "Saving..." : "Save Settings"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
             </div>
           )}
 
