@@ -172,10 +172,11 @@ export default function SuperAdminDashboard() {
 
       setIsMockData(false);
     } catch (e) {
-      console.error("Error loading Super Admin data, using fallback mock data:", e);
-      setIsMockData(true);
-      // Fallback mocks if backend is not running locally
-      setAnalytics({ total_churches: 4, active_subscriptions: 3, total_revenue: 29700.00, mrr: 9900.00 });
+      console.error("Error loading Super Admin data:", e);
+      if (sessionStorage.getItem("super_admin_demo") === "true") {
+        setIsMockData(true);
+        // Fallback mocks for Client Demo Mode
+        setAnalytics({ total_churches: 4, active_subscriptions: 3, total_revenue: 29700.00, mrr: 9900.00 });
       setChurches([
         { id: 1, church_name: "Grace Community Church", registration_no: "FC-998271", pastor_name: "Pastor John", email: "info@grace.com", phone: "+94771234567", city: "Colombo", country: "Sri Lanka", status: "active", users_count: 3, members_count: 142, subscriptions: [{ id: 1, plan: { name: "Premium Plan" }, status: "active", end_date: "2027-01-10" }] },
         { id: 2, church_name: "Calvary Sanctuary", registration_no: "FC-881290", pastor_name: "Pastor David", email: "contact@calvary.org", phone: "+94711112222", city: "Kandy", country: "Sri Lanka", status: "active", users_count: 2, members_count: 89, subscriptions: [{ id: 2, plan: { name: "Basic Plan" }, status: "active", end_date: "2026-08-15" }] },
@@ -191,6 +192,10 @@ export default function SuperAdminDashboard() {
         { id: 1, church: { church_name: "Grace Community Church" }, amount: 9900.00, currency: "LKR", gateway: "stripe", transaction_id: "txn_3M291xLK91", payment_date: "2026-07-10 10:15:30", status: "success" },
         { id: 2, church: { church_name: "Calvary Sanctuary" }, amount: 4900.00, currency: "LKR", gateway: "payhere", transaction_id: "pay_8829102", payment_date: "2026-07-09 14:22:12", status: "success" }
       ]);
+      } else {
+        // If not in demo mode, show empty/error state or throw
+        throw e;
+      }
     } finally {
       setLoading(false);
     }
@@ -228,10 +233,10 @@ export default function SuperAdminDashboard() {
       }
     } catch (err) {
       console.error("Authentication check failed:", err);
-      // Fallback local check only if backend is not running to allow offline testing
-      if (passcodeInput === "Admin@FaithCore") {
+      if (passcodeInput === "ClientDemo123") {
+        // Client Testing Mode requested by user
         sessionStorage.setItem("super_admin_auth", "true");
-        sessionStorage.setItem("super_admin_passcode", passcodeInput);
+        sessionStorage.setItem("super_admin_demo", "true");
         setIsAuthenticated(true);
         setAuthError("");
         fetchData();
@@ -246,6 +251,7 @@ export default function SuperAdminDashboard() {
   const handleLogout = () => {
     sessionStorage.removeItem("super_admin_auth");
     sessionStorage.removeItem("super_admin_passcode");
+    sessionStorage.removeItem("super_admin_demo");
     setIsAuthenticated(false);
     setPasscodeInput("");
   };
@@ -264,8 +270,12 @@ export default function SuperAdminDashboard() {
         setChurches(prev => prev.map(c => c.id === id ? { ...c, status: c.status === "active" ? "inactive" : "active" } : c));
       }
     } catch (e) {
-      // Local fallback
-      setChurches(prev => prev.map(c => c.id === id ? { ...c, status: c.status === "active" ? "inactive" : "active" } : c));
+      if (sessionStorage.getItem("super_admin_demo") === "true") {
+        // Local fallback for demo
+        setChurches(prev => prev.map(c => c.id === id ? { ...c, status: c.status === "active" ? "inactive" : "active" } : c));
+      } else {
+        alert("Failed to toggle status due to connection error.");
+      }
     } finally {
       setActionLoading(null);
     }
@@ -299,6 +309,8 @@ export default function SuperAdminDashboard() {
             </h1>
             <p className="text-gray-400 text-xs sm:text-sm font-medium mb-6 leading-relaxed">
               Enter the Super Admin passcode to monitor the platform database and logs.
+              <br/>
+              <span className="text-violet-400 text-[10px] uppercase tracking-wider block mt-2">Client Demo Passcode: ClientDemo123</span>
             </p>
 
             <form onSubmit={handleVerifyPasscode} className="space-y-4">
@@ -346,7 +358,7 @@ export default function SuperAdminDashboard() {
       {isMockData && (
         <div className="bg-amber-500/10 border-b border-amber-500/20 py-3 text-center text-xs font-semibold text-amber-400 flex items-center justify-center gap-2 relative z-25 backdrop-blur-md">
           <Clock size={14} className="animate-pulse shrink-0" />
-          <span>Offline Mode: Displaying Simulated Platform Mock Data. Please run the backend service (port 8000) to sync.</span>
+          <span>Demo Mode: Displaying Simulated Platform Mock Data for Client Testing.</span>
         </div>
       )}
       
