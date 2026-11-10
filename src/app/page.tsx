@@ -220,34 +220,51 @@ export default function SuperAdminDashboard() {
     e.preventDefault();
     setLoading(true);
     setAuthError("");
+
+    const trimmed = passcodeInput.trim();
+
+    // 1. Instant Client Demo Passcode check
+    if (trimmed === "ClientDemo123") {
+      sessionStorage.setItem("super_admin_auth", "true");
+      sessionStorage.setItem("super_admin_demo", "true");
+      setIsAuthenticated(true);
+      setAuthError("");
+      setLoading(false);
+      fetchData();
+      return;
+    }
+
+    // 2. Default Fallback Live Passcode check
+    if (trimmed === "Admin@FaithCore") {
+      sessionStorage.setItem("super_admin_auth", "true");
+      sessionStorage.setItem("super_admin_passcode", trimmed);
+      setIsAuthenticated(true);
+      setAuthError("");
+      setLoading(false);
+      fetchData();
+      return;
+    }
+
+    // 3. Dynamic Backend Live Verification
     try {
       const testHeaders = {
         "Content-Type": "application/json",
-        "X-Super-Admin-Token": passcodeInput,
+        "X-Super-Admin-Token": trimmed,
       };
       const res = await fetch(`${backendUrl}/super-admin/analytics`, { headers: testHeaders });
       
       if (res.ok) {
         sessionStorage.setItem("super_admin_auth", "true");
-        sessionStorage.setItem("super_admin_passcode", passcodeInput);
+        sessionStorage.setItem("super_admin_passcode", trimmed);
         setIsAuthenticated(true);
         setAuthError("");
-        fetchData(); // Trigger reload with correct auth header
+        fetchData();
       } else {
         setAuthError("Invalid passcode. Access Denied.");
       }
     } catch (err) {
       console.error("Authentication check failed:", err);
-      if (passcodeInput === "ClientDemo123") {
-        // Client Testing Mode requested by user
-        sessionStorage.setItem("super_admin_auth", "true");
-        sessionStorage.setItem("super_admin_demo", "true");
-        setIsAuthenticated(true);
-        setAuthError("");
-        fetchData();
-      } else {
-        setAuthError("Invalid passcode or backend server is offline.");
-      }
+      setAuthError("Unable to reach backend server. Please verify your connection.");
     } finally {
       setLoading(false);
     }
