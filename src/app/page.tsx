@@ -152,49 +152,54 @@ export default function SuperAdminDashboard() {
 
       // Fetch analytics
       const resAnalytics = await fetch(`${backendUrl}/super-admin/analytics`, { headers });
-      const dataAnalytics = await resAnalytics.json();
-      setAnalytics(dataAnalytics);
+      if (resAnalytics.ok) {
+        const dataAnalytics = await resAnalytics.json();
+        setAnalytics(dataAnalytics);
+      }
 
       // Fetch churches
       const resChurches = await fetch(`${backendUrl}/super-admin/churches`, { headers });
-      const dataChurches = await resChurches.json();
-      setChurches(dataChurches);
+      if (resChurches.ok) {
+        const dataChurches = await resChurches.json();
+        if (Array.isArray(dataChurches)) setChurches(dataChurches);
+      }
 
       // Fetch subscriptions
       const resSubs = await fetch(`${backendUrl}/super-admin/subscriptions`, { headers });
-      const dataSubs = await resSubs.json();
-      setSubscriptions(dataSubs);
+      if (resSubs.ok) {
+        const dataSubs = await resSubs.json();
+        if (Array.isArray(dataSubs)) setSubscriptions(dataSubs);
+      }
 
       // Fetch payments
       const resPayments = await fetch(`${backendUrl}/super-admin/payments`, { headers });
-      const dataPayments = await resPayments.json();
-      setPayments(dataPayments);
+      if (resPayments.ok) {
+        const dataPayments = await resPayments.json();
+        if (Array.isArray(dataPayments)) setPayments(dataPayments);
+      }
 
       setIsMockData(false);
     } catch (e) {
-      console.error("Error loading Super Admin data:", e);
+      console.warn("Could not connect to live backend or unauthorized. Using fallback state.");
       if (sessionStorage.getItem("super_admin_demo") === "true") {
         setIsMockData(true);
         // Fallback mocks for Client Demo Mode
         setAnalytics({ total_churches: 4, active_subscriptions: 3, total_revenue: 29700.00, mrr: 9900.00 });
-      setChurches([
-        { id: 1, church_name: "Grace Community Church", registration_no: "FC-998271", pastor_name: "Pastor John", email: "info@grace.com", phone: "+94771234567", city: "Colombo", country: "Sri Lanka", status: "active", users_count: 3, members_count: 142, subscriptions: [{ id: 1, plan: { name: "Premium Plan" }, status: "active", end_date: "2027-01-10" }] },
-        { id: 2, church_name: "Calvary Sanctuary", registration_no: "FC-881290", pastor_name: "Pastor David", email: "contact@calvary.org", phone: "+94711112222", city: "Kandy", country: "Sri Lanka", status: "active", users_count: 2, members_count: 89, subscriptions: [{ id: 2, plan: { name: "Basic Plan" }, status: "active", end_date: "2026-08-15" }] },
-        { id: 3, church_name: "Zion Methodist Church", registration_no: "FC-772183", pastor_name: "Rev. Thomas", email: "thomas@zion.org", phone: "+94710002233", city: "Galle", country: "Sri Lanka", status: "active", users_count: 4, members_count: 210, subscriptions: [{ id: 3, plan: { name: "Premium Plan" }, status: "expired", end_date: "2026-07-01" }] },
-        { id: 4, church_name: "New Life Assembly", registration_no: "FC-556122", pastor_name: "Pastor Saman", email: "saman@newlife.lk", phone: "+94770001111", city: "Jaffna", country: "Sri Lanka", status: "inactive", users_count: 1, members_count: 45, subscriptions: [] }
-      ]);
-      setSubscriptions([
-        { id: 1, church: { church_name: "Grace Community Church" }, plan: { name: "Premium Plan", price: 9900.00 }, start_date: "2026-01-10", end_date: "2027-01-10", status: "active" },
-        { id: 2, church: { church_name: "Calvary Sanctuary" }, plan: { name: "Basic Plan", price: 4900.00 }, start_date: "2026-02-15", end_date: "2026-08-15", status: "active" },
-        { id: 3, church: { church_name: "Zion Methodist Church" }, plan: { name: "Premium Plan", price: 9900.00 }, start_date: "2025-07-01", end_date: "2026-07-01", status: "expired" }
-      ]);
-      setPayments([
-        { id: 1, church: { church_name: "Grace Community Church" }, amount: 9900.00, currency: "LKR", gateway: "stripe", transaction_id: "txn_3M291xLK91", payment_date: "2026-07-10 10:15:30", status: "success" },
-        { id: 2, church: { church_name: "Calvary Sanctuary" }, amount: 4900.00, currency: "LKR", gateway: "payhere", transaction_id: "pay_8829102", payment_date: "2026-07-09 14:22:12", status: "success" }
-      ]);
-      } else {
-        // If not in demo mode, show empty/error state or throw
-        throw e;
+        setChurches([
+          { id: 1, church_name: "Grace Community Church", registration_no: "FC-998271", pastor_name: "Pastor John", email: "info@grace.com", phone: "+94771234567", city: "Colombo", country: "Sri Lanka", status: "active", users_count: 3, members_count: 142, subscriptions: [{ id: 1, plan: { name: "Premium Plan" }, status: "active", end_date: "2027-01-10" }] },
+          { id: 2, church_name: "Calvary Sanctuary", registration_no: "FC-881290", pastor_name: "Pastor David", email: "contact@calvary.org", phone: "+94711112222", city: "Kandy", country: "Sri Lanka", status: "active", users_count: 2, members_count: 89, subscriptions: [{ id: 2, plan: { name: "Basic Plan" }, status: "active", end_date: "2026-08-15" }] },
+          { id: 3, church_name: "Zion Methodist Church", registration_no: "FC-772183", pastor_name: "Rev. Thomas", email: "thomas@zion.org", phone: "+94710002233", city: "Galle", country: "Sri Lanka", status: "active", users_count: 4, members_count: 210, subscriptions: [{ id: 3, plan: { name: "Premium Plan" }, status: "expired", end_date: "2026-07-01" }] },
+          { id: 4, church_name: "New Life Assembly", registration_no: "FC-556122", pastor_name: "Pastor Saman", email: "saman@newlife.lk", phone: "+94770001111", city: "Jaffna", country: "Sri Lanka", status: "inactive", users_count: 1, members_count: 45, subscriptions: [] }
+        ]);
+        setSubscriptions([
+          { id: 1, church: { church_name: "Grace Community Church" }, plan: { name: "Premium Plan", price: 9900.00 }, start_date: "2026-01-10", end_date: "2027-01-10", status: "active" },
+          { id: 2, church: { church_name: "Calvary Sanctuary" }, plan: { name: "Basic Plan", price: 4900.00 }, start_date: "2026-02-15", end_date: "2026-08-15", status: "active" },
+          { id: 3, church: { church_name: "Zion Methodist Church" }, plan: { name: "Premium Plan", price: 9900.00 }, start_date: "2025-07-01", end_date: "2026-07-01", status: "expired" }
+        ]);
+        setPayments([
+          { id: 1, church: { church_name: "Grace Community Church" }, amount: 9900.00, currency: "LKR", gateway: "stripe", transaction_id: "txn_3M291xLK91", payment_date: "2026-07-10 10:15:30", status: "success" },
+          { id: 2, church: { church_name: "Calvary Sanctuary" }, amount: 4900.00, currency: "LKR", gateway: "payhere", transaction_id: "pay_8829102", payment_date: "2026-07-09 14:22:12", status: "success" }
+        ]);
       }
     } finally {
       setLoading(false);
