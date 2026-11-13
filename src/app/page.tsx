@@ -724,7 +724,7 @@ export default function SuperAdminDashboard() {
 
         </section>
 
-      \n        {/* SMS SETTINGS MODAL */}
+        {/* SMS SETTINGS MODAL */}
               {selectedSmsChurch && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
                   <div className="w-full max-w-md bg-[#0e1528] border border-white/10 rounded-2xl p-6 shadow-2xl text-white">
@@ -792,7 +792,9 @@ export default function SuperAdminDashboard() {
                     </form>
                   </div>
                 </div>
-              )}\n\n      </main>
+              )}
+
+      </main>
 
     </div>
   );
