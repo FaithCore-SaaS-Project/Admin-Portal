@@ -17,7 +17,8 @@ import {
   RefreshCw,
   LogOut,
   CreditCard,
-  Lock
+  Lock,
+  Trash2
 } from "lucide-react";
 
 interface Analytics {
@@ -82,7 +83,6 @@ export default function SuperAdminDashboard() {
   const [payments, setPayments] = useState<Payment[]>([]);
   
   const [loading, setLoading] = useState(true);
-  const [isMockData, setIsMockData] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -91,6 +91,10 @@ export default function SuperAdminDashboard() {
   const [inputSenderId, setInputSenderId] = useState("");
   const [inputTopupAmount, setInputTopupAmount] = useState<number | "">("");
   const [smsUpdating, setSmsUpdating] = useState(false);
+
+  // Permanent Delete Modal State
+  const [deleteModalChurch, setDeleteModalChurch] = useState<Church | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleSaveSmsSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,6 +166,8 @@ export default function SuperAdminDashboard() {
       if (resChurches.ok) {
         const dataChurches = await resChurches.json();
         if (Array.isArray(dataChurches)) setChurches(dataChurches);
+      } else {
+        setChurches([]);
       }
 
       // Fetch subscriptions
@@ -169,6 +175,8 @@ export default function SuperAdminDashboard() {
       if (resSubs.ok) {
         const dataSubs = await resSubs.json();
         if (Array.isArray(dataSubs)) setSubscriptions(dataSubs);
+      } else {
+        setSubscriptions([]);
       }
 
       // Fetch payments
@@ -176,31 +184,11 @@ export default function SuperAdminDashboard() {
       if (resPayments.ok) {
         const dataPayments = await resPayments.json();
         if (Array.isArray(dataPayments)) setPayments(dataPayments);
+      } else {
+        setPayments([]);
       }
-
-      setIsMockData(false);
     } catch (e) {
-      console.warn("Could not connect to live backend or unauthorized. Using fallback state.");
-      if (sessionStorage.getItem("super_admin_demo") === "true") {
-        setIsMockData(true);
-        // Fallback mocks for Client Demo Mode
-        setAnalytics({ total_churches: 4, active_subscriptions: 3, total_revenue: 29700.00, mrr: 9900.00 });
-        setChurches([
-          { id: 1, church_name: "Grace Community Church", registration_no: "FC-998271", pastor_name: "Pastor John", email: "info@grace.com", phone: "+94771234567", city: "Colombo", country: "Sri Lanka", status: "active", users_count: 3, members_count: 142, subscriptions: [{ id: 1, plan: { name: "Premium Plan" }, status: "active", end_date: "2027-01-10" }] },
-          { id: 2, church_name: "Calvary Sanctuary", registration_no: "FC-881290", pastor_name: "Pastor David", email: "contact@calvary.org", phone: "+94711112222", city: "Kandy", country: "Sri Lanka", status: "active", users_count: 2, members_count: 89, subscriptions: [{ id: 2, plan: { name: "Basic Plan" }, status: "active", end_date: "2026-08-15" }] },
-          { id: 3, church_name: "Zion Methodist Church", registration_no: "FC-772183", pastor_name: "Rev. Thomas", email: "thomas@zion.org", phone: "+94710002233", city: "Galle", country: "Sri Lanka", status: "active", users_count: 4, members_count: 210, subscriptions: [{ id: 3, plan: { name: "Premium Plan" }, status: "expired", end_date: "2026-07-01" }] },
-          { id: 4, church_name: "New Life Assembly", registration_no: "FC-556122", pastor_name: "Pastor Saman", email: "saman@newlife.lk", phone: "+94770001111", city: "Jaffna", country: "Sri Lanka", status: "inactive", users_count: 1, members_count: 45, subscriptions: [] }
-        ]);
-        setSubscriptions([
-          { id: 1, church: { church_name: "Grace Community Church" }, plan: { name: "Premium Plan", price: 9900.00 }, start_date: "2026-01-10", end_date: "2027-01-10", status: "active" },
-          { id: 2, church: { church_name: "Calvary Sanctuary" }, plan: { name: "Basic Plan", price: 4900.00 }, start_date: "2026-02-15", end_date: "2026-08-15", status: "active" },
-          { id: 3, church: { church_name: "Zion Methodist Church" }, plan: { name: "Premium Plan", price: 9900.00 }, start_date: "2025-07-01", end_date: "2026-07-01", status: "expired" }
-        ]);
-        setPayments([
-          { id: 1, church: { church_name: "Grace Community Church" }, amount: 9900.00, currency: "LKR", gateway: "stripe", transaction_id: "txn_3M291xLK91", payment_date: "2026-07-10 10:15:30", status: "success" },
-          { id: 2, church: { church_name: "Calvary Sanctuary" }, amount: 4900.00, currency: "LKR", gateway: "payhere", transaction_id: "pay_8829102", payment_date: "2026-07-09 14:22:12", status: "success" }
-        ]);
-      }
+      console.warn("Could not connect to live backend:", e);
     } finally {
       setLoading(false);
     }
@@ -223,18 +211,7 @@ export default function SuperAdminDashboard() {
 
     const trimmed = passcodeInput.trim();
 
-    // 1. Instant Client Demo Passcode check
-    if (trimmed === "ClientDemo123") {
-      sessionStorage.setItem("super_admin_auth", "true");
-      sessionStorage.setItem("super_admin_demo", "true");
-      setIsAuthenticated(true);
-      setAuthError("");
-      setLoading(false);
-      fetchData();
-      return;
-    }
-
-    // 2. Default Fallback Live Passcode check
+    // Verify Passcode against live Super Admin Token or default
     if (trimmed === "Admin@FaithCore") {
       sessionStorage.setItem("super_admin_auth", "true");
       sessionStorage.setItem("super_admin_passcode", trimmed);
@@ -245,7 +222,6 @@ export default function SuperAdminDashboard() {
       return;
     }
 
-    // 3. Dynamic Backend Live Verification
     try {
       const testHeaders = {
         "Content-Type": "application/json",
@@ -288,18 +264,34 @@ export default function SuperAdminDashboard() {
       if (res.ok) {
         await fetchData();
       } else {
-        // Mock state toggle if API fails
-        setChurches(prev => prev.map(c => c.id === id ? { ...c, status: c.status === "active" ? "inactive" : "active" } : c));
+        alert("Failed to update status on server.");
       }
     } catch (e) {
-      if (sessionStorage.getItem("super_admin_demo") === "true") {
-        // Local fallback for demo
-        setChurches(prev => prev.map(c => c.id === id ? { ...c, status: c.status === "active" ? "inactive" : "active" } : c));
-      } else {
-        alert("Failed to toggle status due to connection error.");
-      }
+      alert("Failed to toggle status due to connection error.");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleDeleteChurch = async (id: number) => {
+    try {
+      setIsDeleting(true);
+      const res = await fetch(`${backendUrl}/super-admin/churches/${id}`, {
+        method: "DELETE",
+        headers: getHeaders()
+      });
+      if (res.ok) {
+        alert("Church account deleted permanently!");
+        setDeleteModalChurch(null);
+        await fetchData();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.message || "Failed to delete church from server.");
+      }
+    } catch (e) {
+      alert("Error connecting to server to delete church.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -327,12 +319,10 @@ export default function SuperAdminDashboard() {
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-2">
-              SaaS Portal Lock
+              Super Admin Console
             </h1>
             <p className="text-gray-400 text-xs sm:text-sm font-medium mb-6 leading-relaxed">
-              Enter the Super Admin passcode to monitor the platform database and logs.
-              <br/>
-              <span className="text-violet-400 text-[10px] uppercase tracking-wider block mt-2">Client Demo Passcode: ClientDemo123</span>
+              Enter the Super Admin security key to manage live platform churches, subscriptions, and database records.
             </p>
 
             <form onSubmit={handleVerifyPasscode} className="space-y-4">
@@ -377,12 +367,6 @@ export default function SuperAdminDashboard() {
   return (
     <div className="min-h-screen bg-[#070913] text-white selection:bg-[#5B3DF5] selection:text-white font-sans">
       
-      {isMockData && (
-        <div className="bg-amber-500/10 border-b border-amber-500/20 py-3 text-center text-xs font-semibold text-amber-400 flex items-center justify-center gap-2 relative z-25 backdrop-blur-md">
-          <Clock size={14} className="animate-pulse shrink-0" />
-          <span>Demo Mode: Displaying Simulated Platform Mock Data for Client Testing.</span>
-        </div>
-      )}
       
       {/* Background decoration glows */}
       <div className="absolute top-0 left-0 w-full h-[600px] opacity-30 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-900/35 via-[#070B18] to-transparent pointer-events-none"></div>
@@ -618,11 +602,19 @@ export default function SuperAdminDashboard() {
                               disabled={actionLoading === c.id}
                               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                                 c.status === "active"
-                                  ? "bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+                                  ? "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
                                   : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
                               }`}
                             >
                               {actionLoading === c.id ? "Updating..." : c.status === "active" ? "Deactivate" : "Activate"}
+                            </button>
+                            <button
+                              onClick={() => setDeleteModalChurch(c)}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all"
+                              title="Permanently Delete Church"
+                            >
+                              <Trash2 size={13} />
+                              Delete
                             </button>
                           </div>
                         </td>
